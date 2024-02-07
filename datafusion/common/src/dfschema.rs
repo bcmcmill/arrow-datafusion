@@ -142,9 +142,11 @@ impl DFSchema {
             if let Some(qualifier) = field.qualifier() {
                 qualified_names.insert((qualifier, field.name()));
             } else if !unqualified_names.insert(field.name()) {
-                return _schema_err!(SchemaError::DuplicateUnqualifiedField {
-                    name: field.name().to_string(),
-                });
+                continue;
+                // TODO: Returning an error here currently breaks Ballista.
+                // return _schema_err!(SchemaError::DuplicateUnqualifiedField {
+                //     name: field.name().to_string(),
+                // });
             }
         }
 
