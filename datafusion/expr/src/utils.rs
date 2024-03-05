@@ -31,11 +31,11 @@ use crate::{
 };
 
 use arrow::datatypes::{DataType, TimeUnit};
-use datafusion_common::tree_node::{TreeNode, VisitRecursion};
+use datafusion_common::tree_node::{TreeNode, TreeNodeRecursion};
 use datafusion_common::utils::get_at_indices;
 use datafusion_common::{
     internal_err, plan_datafusion_err, plan_err, Column, DFField, DFSchema, DFSchemaRef,
-    DataFusionError, Result, ScalarValue, TableReference,
+    Result, ScalarValue, TableReference,
 };
 
 use sqlparser::ast::{ExceptSelectItem, ExcludeSelectItem, WildcardAdditionalOptions};
@@ -129,14 +129,15 @@ fn check_grouping_sets_size_limit(size: usize) -> Result<()> {
 
 /// Merge two grouping_set
 ///
-///
-/// Example:
-///
+/// # Example
+/// ```text
 /// (A, B), (C, D) -> (A, B, C, D)
+/// ```
 ///
-/// Error:
+/// # Error
+/// - [`DataFusionError`]: The number of group_expression in grouping_set exceeds the maximum limit
 ///
-/// [`DataFusionError`] The number of group_expression in grouping_set exceeds the maximum limit
+/// [`DataFusionError`]: datafusion_common::DataFusionError
 fn merge_grouping_set<T: Clone>(left: &[T], right: &[T]) -> Result<Vec<T>> {
     check_grouping_set_size_limit(left.len() + right.len())?;
     Ok(left.iter().chain(right.iter()).cloned().collect())
@@ -144,15 +145,16 @@ fn merge_grouping_set<T: Clone>(left: &[T], right: &[T]) -> Result<Vec<T>> {
 
 /// Compute the cross product of two grouping_sets
 ///
+/// # Example
+/// ```text
+/// [(A, B), (C, D)], [(E), (F)] -> [(A, B, E), (A, B, F), (C, D, E), (C, D, F)]
+/// ```
 ///
-/// Example:
+/// # Error
+/// - [`DataFusionError`]: The number of group_expression in grouping_set exceeds the maximum limit
+/// - [`DataFusionError`]: The number of grouping_set in grouping_sets exceeds the maximum limit
 ///
-/// \[(A, B), (C, D)], [(E), (F)\] -> \[(A, B, E), (A, B, F), (C, D, E), (C, D, F)\]
-///
-/// Error:
-///
-/// [`DataFusionError`] The number of group_expression in grouping_set exceeds the maximum limit \
-/// [`DataFusionError`] The number of grouping_set in grouping_sets exceeds the maximum limit
+/// [`DataFusionError`]: datafusion_common::DataFusionError
 fn cross_join_grouping_sets<T: Clone>(
     left: &[Vec<T>],
     right: &[Vec<T>],
@@ -663,10 +665,10 @@ where
                 exprs.push(expr.clone())
             }
             // stop recursing down this expr once we find a match
-            return Ok(VisitRecursion::Skip);
+            return Ok(TreeNodeRecursion::Jump);
         }
 
-        Ok(VisitRecursion::Continue)
+        Ok(TreeNodeRecursion::Continue)
     })
     // pre_visit always returns OK, so this will always too
     .expect("no way to return error during recursion");
@@ -683,10 +685,10 @@ where
         if let Err(e) = f(expr) {
             // save the error for later (it may not be a DataFusionError
             err = Err(e);
-            Ok(VisitRecursion::Stop)
+            Ok(TreeNodeRecursion::Stop)
         } else {
             // keep going
-            Ok(VisitRecursion::Continue)
+            Ok(TreeNodeRecursion::Continue)
         }
     })
     // The closure always returns OK, so this will always too

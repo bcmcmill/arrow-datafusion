@@ -22,7 +22,7 @@ use std::fs::{metadata, File};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use super::SendableRecordBatchStream;
+use super::{ExecutionPlanProperties, SendableRecordBatchStream};
 use crate::stream::RecordBatchReceiverStream;
 use crate::{ColumnStatistics, ExecutionPlan, Statistics};
 
@@ -36,9 +36,8 @@ use datafusion_execution::memory_pool::MemoryReservation;
 use datafusion_physical_expr::expressions::{BinaryExpr, Column};
 use datafusion_physical_expr::{PhysicalExpr, PhysicalSortExpr};
 
-use futures::{Future, StreamExt, TryStreamExt};
+use futures::{StreamExt, TryStreamExt};
 use parking_lot::Mutex;
-use tokio::task::{JoinError, JoinSet};
 
 /// [`MemoryReservation`] used across query execution streams
 pub(crate) type SharedMemoryReservation = Arc<Mutex<MemoryReservation>>;
@@ -169,46 +168,6 @@ pub fn compute_record_batch_statistics(
         num_rows: Precision::Exact(nb_rows),
         total_byte_size: Precision::Exact(total_byte_size),
         column_statistics,
-    }
-}
-
-/// Helper that  provides a simple API to spawn a single task and join it.
-/// Provides guarantees of aborting on `Drop` to keep it cancel-safe.
-///
-/// Technically, it's just a wrapper of `JoinSet` (with size=1).
-#[derive(Debug)]
-pub struct SpawnedTask<R> {
-    inner: JoinSet<R>,
-}
-
-impl<R: 'static> SpawnedTask<R> {
-    pub fn spawn<T>(task: T) -> Self
-    where
-        T: Future<Output = R>,
-        T: Send + 'static,
-        R: Send,
-    {
-        let mut inner = JoinSet::new();
-        inner.spawn(task);
-        Self { inner }
-    }
-
-    pub fn spawn_blocking<T>(task: T) -> Self
-    where
-        T: FnOnce() -> R,
-        T: Send + 'static,
-        R: Send,
-    {
-        let mut inner = JoinSet::new();
-        inner.spawn_blocking(task);
-        Self { inner }
-    }
-
-    pub async fn join(mut self) -> Result<R, JoinError> {
-        self.inner
-            .join_next()
-            .await
-            .expect("`SpawnedTask` instance always contains exactly 1 task")
     }
 }
 
@@ -381,11 +340,10 @@ mod tests {
 
     use arrow::compute::SortOptions;
     use arrow::{
-        array::{Float32Array, Float64Array},
+        array::{Float32Array, Float64Array, UInt64Array},
         datatypes::{DataType, Field, Schema},
         record_batch::RecordBatch,
     };
-    use arrow_array::UInt64Array;
     use datafusion_expr::Operator;
     use datafusion_physical_expr::expressions::{col, Column};
 

@@ -895,6 +895,8 @@ pub struct ScalarUdfExprNode {
     pub fun_name: ::prost::alloc::string::String,
     #[prost(message, repeated, tag = "2")]
     pub args: ::prost::alloc::vec::Vec<LogicalExprNode>,
+    #[prost(bytes = "vec", optional, tag = "3")]
+    pub fun_definition: ::core::option::Option<::prost::alloc::vec::Vec<u8>>,
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -2636,8 +2638,8 @@ pub enum ScalarFunction {
     ///   0 was Abs before
     ///   The first enum value must be zero for open enums
     Unknown = 0,
-    Acos = 1,
-    Asin = 2,
+    ///   1 was Acos
+    ///   2 was Asin
     Atan = 3,
     Ascii = 4,
     Ceil = 5,
@@ -2656,7 +2658,7 @@ pub enum ScalarFunction {
     Tan = 18,
     Trunc = 19,
     Array = 20,
-    RegexpMatch = 21,
+    /// RegexpMatch = 21;
     BitLength = 22,
     Btrim = 23,
     CharacterLength = 24,
@@ -2690,10 +2692,10 @@ pub enum ScalarFunction {
     Strpos = 52,
     Substr = 53,
     ToHex = 54,
-    ToTimestamp = 55,
-    ToTimestampMillis = 56,
-    ToTimestampMicros = 57,
-    ToTimestampSeconds = 58,
+    /// 55 was ToTimestamp
+    /// 56 was ToTimestampMillis
+    /// 57 was ToTimestampMicros
+    /// 58 was ToTimestampSeconds
     Now = 59,
     Translate = 60,
     Trim = 61,
@@ -2723,17 +2725,17 @@ pub enum ScalarFunction {
     Gcd = 85,
     ArrayAppend = 86,
     ArrayConcat = 87,
-    ArrayDims = 88,
+    /// 88 was ArrayDims
     ArrayRepeat = 89,
     ArrayLength = 90,
-    ArrayNdims = 91,
+    /// 91 was ArrayNdims
     ArrayPosition = 92,
     ArrayPositions = 93,
     ArrayPrepend = 94,
     ArrayRemove = 95,
     ArrayReplace = 96,
     /// 97 was ArrayToString
-    Cardinality = 98,
+    /// 98 was Cardinality
     ArrayElement = 99,
     ArraySlice = 100,
     Cot = 103,
@@ -2751,11 +2753,11 @@ pub enum ScalarFunction {
     ArrayEmpty = 115,
     ArrayPopBack = 116,
     StringToArray = 117,
-    ToTimestampNanos = 118,
+    /// 118 was ToTimestampNanos
     ArrayIntersect = 119,
     ArrayUnion = 120,
     OverLay = 121,
-    Range = 122,
+    /// / 122 is Range
     ArrayExcept = 123,
     ArrayPopFront = 124,
     Levenshtein = 125,
@@ -2765,10 +2767,12 @@ pub enum ScalarFunction {
     ArrayDistinct = 129,
     ArrayResize = 130,
     EndsWith = 131,
-    InStr = 132,
+    /// / 132 was InStr
     MakeDate = 133,
     ArrayReverse = 134,
-    RegexpLike = 135,
+    /// / 135 is RegexpLike
+    ///
+    /// / 137 was ToDate
     ToChar = 136,
 }
 impl ScalarFunction {
@@ -2779,8 +2783,6 @@ impl ScalarFunction {
     pub fn as_str_name(&self) -> &'static str {
         match self {
             ScalarFunction::Unknown => "unknown",
-            ScalarFunction::Acos => "Acos",
-            ScalarFunction::Asin => "Asin",
             ScalarFunction::Atan => "Atan",
             ScalarFunction::Ascii => "Ascii",
             ScalarFunction::Ceil => "Ceil",
@@ -2799,7 +2801,6 @@ impl ScalarFunction {
             ScalarFunction::Tan => "Tan",
             ScalarFunction::Trunc => "Trunc",
             ScalarFunction::Array => "Array",
-            ScalarFunction::RegexpMatch => "RegexpMatch",
             ScalarFunction::BitLength => "BitLength",
             ScalarFunction::Btrim => "Btrim",
             ScalarFunction::CharacterLength => "CharacterLength",
@@ -2832,10 +2833,6 @@ impl ScalarFunction {
             ScalarFunction::Strpos => "Strpos",
             ScalarFunction::Substr => "Substr",
             ScalarFunction::ToHex => "ToHex",
-            ScalarFunction::ToTimestamp => "ToTimestamp",
-            ScalarFunction::ToTimestampMillis => "ToTimestampMillis",
-            ScalarFunction::ToTimestampMicros => "ToTimestampMicros",
-            ScalarFunction::ToTimestampSeconds => "ToTimestampSeconds",
             ScalarFunction::Now => "Now",
             ScalarFunction::Translate => "Translate",
             ScalarFunction::Trim => "Trim",
@@ -2865,16 +2862,13 @@ impl ScalarFunction {
             ScalarFunction::Gcd => "Gcd",
             ScalarFunction::ArrayAppend => "ArrayAppend",
             ScalarFunction::ArrayConcat => "ArrayConcat",
-            ScalarFunction::ArrayDims => "ArrayDims",
             ScalarFunction::ArrayRepeat => "ArrayRepeat",
             ScalarFunction::ArrayLength => "ArrayLength",
-            ScalarFunction::ArrayNdims => "ArrayNdims",
             ScalarFunction::ArrayPosition => "ArrayPosition",
             ScalarFunction::ArrayPositions => "ArrayPositions",
             ScalarFunction::ArrayPrepend => "ArrayPrepend",
             ScalarFunction::ArrayRemove => "ArrayRemove",
             ScalarFunction::ArrayReplace => "ArrayReplace",
-            ScalarFunction::Cardinality => "Cardinality",
             ScalarFunction::ArrayElement => "ArrayElement",
             ScalarFunction::ArraySlice => "ArraySlice",
             ScalarFunction::Cot => "Cot",
@@ -2891,11 +2885,9 @@ impl ScalarFunction {
             ScalarFunction::ArrayEmpty => "ArrayEmpty",
             ScalarFunction::ArrayPopBack => "ArrayPopBack",
             ScalarFunction::StringToArray => "StringToArray",
-            ScalarFunction::ToTimestampNanos => "ToTimestampNanos",
             ScalarFunction::ArrayIntersect => "ArrayIntersect",
             ScalarFunction::ArrayUnion => "ArrayUnion",
             ScalarFunction::OverLay => "OverLay",
-            ScalarFunction::Range => "Range",
             ScalarFunction::ArrayExcept => "ArrayExcept",
             ScalarFunction::ArrayPopFront => "ArrayPopFront",
             ScalarFunction::Levenshtein => "Levenshtein",
@@ -2905,10 +2897,8 @@ impl ScalarFunction {
             ScalarFunction::ArrayDistinct => "ArrayDistinct",
             ScalarFunction::ArrayResize => "ArrayResize",
             ScalarFunction::EndsWith => "EndsWith",
-            ScalarFunction::InStr => "InStr",
             ScalarFunction::MakeDate => "MakeDate",
             ScalarFunction::ArrayReverse => "ArrayReverse",
-            ScalarFunction::RegexpLike => "RegexpLike",
             ScalarFunction::ToChar => "ToChar",
         }
     }
@@ -2916,8 +2906,6 @@ impl ScalarFunction {
     pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
         match value {
             "unknown" => Some(Self::Unknown),
-            "Acos" => Some(Self::Acos),
-            "Asin" => Some(Self::Asin),
             "Atan" => Some(Self::Atan),
             "Ascii" => Some(Self::Ascii),
             "Ceil" => Some(Self::Ceil),
@@ -2936,7 +2924,6 @@ impl ScalarFunction {
             "Tan" => Some(Self::Tan),
             "Trunc" => Some(Self::Trunc),
             "Array" => Some(Self::Array),
-            "RegexpMatch" => Some(Self::RegexpMatch),
             "BitLength" => Some(Self::BitLength),
             "Btrim" => Some(Self::Btrim),
             "CharacterLength" => Some(Self::CharacterLength),
@@ -2969,10 +2956,6 @@ impl ScalarFunction {
             "Strpos" => Some(Self::Strpos),
             "Substr" => Some(Self::Substr),
             "ToHex" => Some(Self::ToHex),
-            "ToTimestamp" => Some(Self::ToTimestamp),
-            "ToTimestampMillis" => Some(Self::ToTimestampMillis),
-            "ToTimestampMicros" => Some(Self::ToTimestampMicros),
-            "ToTimestampSeconds" => Some(Self::ToTimestampSeconds),
             "Now" => Some(Self::Now),
             "Translate" => Some(Self::Translate),
             "Trim" => Some(Self::Trim),
@@ -3002,16 +2985,13 @@ impl ScalarFunction {
             "Gcd" => Some(Self::Gcd),
             "ArrayAppend" => Some(Self::ArrayAppend),
             "ArrayConcat" => Some(Self::ArrayConcat),
-            "ArrayDims" => Some(Self::ArrayDims),
             "ArrayRepeat" => Some(Self::ArrayRepeat),
             "ArrayLength" => Some(Self::ArrayLength),
-            "ArrayNdims" => Some(Self::ArrayNdims),
             "ArrayPosition" => Some(Self::ArrayPosition),
             "ArrayPositions" => Some(Self::ArrayPositions),
             "ArrayPrepend" => Some(Self::ArrayPrepend),
             "ArrayRemove" => Some(Self::ArrayRemove),
             "ArrayReplace" => Some(Self::ArrayReplace),
-            "Cardinality" => Some(Self::Cardinality),
             "ArrayElement" => Some(Self::ArrayElement),
             "ArraySlice" => Some(Self::ArraySlice),
             "Cot" => Some(Self::Cot),
@@ -3028,11 +3008,9 @@ impl ScalarFunction {
             "ArrayEmpty" => Some(Self::ArrayEmpty),
             "ArrayPopBack" => Some(Self::ArrayPopBack),
             "StringToArray" => Some(Self::StringToArray),
-            "ToTimestampNanos" => Some(Self::ToTimestampNanos),
             "ArrayIntersect" => Some(Self::ArrayIntersect),
             "ArrayUnion" => Some(Self::ArrayUnion),
             "OverLay" => Some(Self::OverLay),
-            "Range" => Some(Self::Range),
             "ArrayExcept" => Some(Self::ArrayExcept),
             "ArrayPopFront" => Some(Self::ArrayPopFront),
             "Levenshtein" => Some(Self::Levenshtein),
@@ -3042,10 +3020,8 @@ impl ScalarFunction {
             "ArrayDistinct" => Some(Self::ArrayDistinct),
             "ArrayResize" => Some(Self::ArrayResize),
             "EndsWith" => Some(Self::EndsWith),
-            "InStr" => Some(Self::InStr),
             "MakeDate" => Some(Self::MakeDate),
             "ArrayReverse" => Some(Self::ArrayReverse),
-            "RegexpLike" => Some(Self::RegexpLike),
             "ToChar" => Some(Self::ToChar),
             _ => None,
         }
