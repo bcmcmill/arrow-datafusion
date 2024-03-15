@@ -18,17 +18,18 @@
 //! implementation kernels for array functions
 
 use arrow::array::{
-    Array, ArrayRef, BooleanArray, Date32Array, Float32Array, Float64Array,
+    Array, ArrayRef, BooleanArray, Capacities, Date32Array, Float32Array, Float64Array,
     GenericListArray, Int16Array, Int32Array, Int64Array, Int8Array, LargeListArray,
-    LargeStringArray, ListArray, ListBuilder, OffsetSizeTrait, StringArray,
-    StringBuilder, UInt16Array, UInt32Array, UInt64Array, UInt8Array,
+    LargeStringArray, ListArray, ListBuilder, MutableArrayData, OffsetSizeTrait,
+    StringArray, StringBuilder, UInt16Array, UInt32Array, UInt64Array, UInt8Array,
 };
 use arrow::compute;
 use arrow::datatypes::{
     DataType, Date32Type, Field, IntervalMonthDayNanoType, UInt64Type,
 };
 use arrow::row::{RowConverter, SortField};
-use arrow_buffer::{BooleanBufferBuilder, NullBuffer, OffsetBuffer};
+use arrow_array::new_null_array;
+use arrow_buffer::{ArrowNativeType, BooleanBufferBuilder, NullBuffer, OffsetBuffer};
 use arrow_schema::FieldRef;
 use arrow_schema::SortOptions;
 
@@ -38,9 +39,11 @@ use datafusion_common::cast::{
     as_string_array,
 };
 use datafusion_common::{
-    exec_err, internal_err, not_impl_datafusion_err, DataFusionError, Result,
+    exec_err, internal_datafusion_err, internal_err, not_impl_datafusion_err,
+    DataFusionError, Result, ScalarValue,
 };
 use itertools::Itertools;
+
 use std::any::type_name;
 use std::sync::Arc;
 
@@ -733,6 +736,152 @@ fn general_array_length<O: OffsetSizeTrait>(array: &[ArrayRef]) -> Result<ArrayR
     Ok(Arc::new(result) as ArrayRef)
 }
 
+/// Array_repeat SQL function
+pub fn array_repeat(args: &[ArrayRef]) -> Result<ArrayRef> {
+    if args.len() != 2 {
+        return exec_err!("array_repeat expects two arguments");
+    }
+
+    let element = &args[0];
+    let count_array = as_int64_array(&args[1])?;
+
+    match element.data_type() {
+        DataType::List(_) => {
+            let list_array = as_list_array(element)?;
+            general_list_repeat::<i32>(list_array, count_array)
+        }
+        DataType::LargeList(_) => {
+            let list_array = as_large_list_array(element)?;
+            general_list_repeat::<i64>(list_array, count_array)
+        }
+        _ => general_repeat::<i32>(element, count_array),
+    }
+}
+
+/// For each element of `array[i]` repeat `count_array[i]` times.
+///
+/// Assumption for the input:
+///     1. `count[i] >= 0`
+///     2. `array.len() == count_array.len()`
+///
+/// For example,
+/// ```text
+/// array_repeat(
+///     [1, 2, 3], [2, 0, 1] => [[1, 1], [], [3]]
+/// )
+/// ```
+fn general_repeat<O: OffsetSizeTrait>(
+    array: &ArrayRef,
+    count_array: &Int64Array,
+) -> Result<ArrayRef> {
+    let data_type = array.data_type();
+    let mut new_values = vec![];
+
+    let count_vec = count_array
+        .values()
+        .to_vec()
+        .iter()
+        .map(|x| *x as usize)
+        .collect::<Vec<_>>();
+
+    for (row_index, &count) in count_vec.iter().enumerate() {
+        let repeated_array = if array.is_null(row_index) {
+            new_null_array(data_type, count)
+        } else {
+            let original_data = array.to_data();
+            let capacity = Capacities::Array(count);
+            let mut mutable =
+                MutableArrayData::with_capacities(vec![&original_data], false, capacity);
+
+            for _ in 0..count {
+                mutable.extend(0, row_index, row_index + 1);
+            }
+
+            let data = mutable.freeze();
+            arrow_array::make_array(data)
+        };
+        new_values.push(repeated_array);
+    }
+
+    let new_values: Vec<_> = new_values.iter().map(|a| a.as_ref()).collect();
+    let values = compute::concat(&new_values)?;
+
+    Ok(Arc::new(GenericListArray::<O>::try_new(
+        Arc::new(Field::new("item", data_type.to_owned(), true)),
+        OffsetBuffer::from_lengths(count_vec),
+        values,
+        None,
+    )?))
+}
+
+/// Handle List version of `general_repeat`
+///
+/// For each element of `list_array[i]` repeat `count_array[i]` times.
+///
+/// For example,
+/// ```text
+/// array_repeat(
+///     [[1, 2, 3], [4, 5], [6]], [2, 0, 1] => [[[1, 2, 3], [1, 2, 3]], [], [[6]]]
+/// )
+/// ```
+fn general_list_repeat<O: OffsetSizeTrait>(
+    list_array: &GenericListArray<O>,
+    count_array: &Int64Array,
+) -> Result<ArrayRef> {
+    let data_type = list_array.data_type();
+    let value_type = list_array.value_type();
+    let mut new_values = vec![];
+
+    let count_vec = count_array
+        .values()
+        .to_vec()
+        .iter()
+        .map(|x| *x as usize)
+        .collect::<Vec<_>>();
+
+    for (list_array_row, &count) in list_array.iter().zip(count_vec.iter()) {
+        let list_arr = match list_array_row {
+            Some(list_array_row) => {
+                let original_data = list_array_row.to_data();
+                let capacity = Capacities::Array(original_data.len() * count);
+                let mut mutable = MutableArrayData::with_capacities(
+                    vec![&original_data],
+                    false,
+                    capacity,
+                );
+
+                for _ in 0..count {
+                    mutable.extend(0, 0, original_data.len());
+                }
+
+                let data = mutable.freeze();
+                let repeated_array = arrow_array::make_array(data);
+
+                let list_arr = GenericListArray::<O>::try_new(
+                    Arc::new(Field::new("item", value_type.clone(), true)),
+                    OffsetBuffer::<O>::from_lengths(vec![original_data.len(); count]),
+                    repeated_array,
+                    None,
+                )?;
+                Arc::new(list_arr) as ArrayRef
+            }
+            None => new_null_array(data_type, count),
+        };
+        new_values.push(list_arr);
+    }
+
+    let lengths = new_values.iter().map(|a| a.len()).collect::<Vec<_>>();
+    let new_values: Vec<_> = new_values.iter().map(|a| a.as_ref()).collect();
+    let values = compute::concat(&new_values)?;
+
+    Ok(Arc::new(ListArray::try_new(
+        Arc::new(Field::new("item", data_type.to_owned(), true)),
+        OffsetBuffer::<i32>::from_lengths(lengths),
+        values,
+        None,
+    )?))
+}
+
 /// Array_length SQL function
 pub fn array_length(args: &[ArrayRef]) -> Result<ArrayRef> {
     if args.len() != 1 && args.len() != 2 {
@@ -744,6 +893,100 @@ pub fn array_length(args: &[ArrayRef]) -> Result<ArrayRef> {
         DataType::LargeList(_) => general_array_length::<i64>(args),
         array_type => exec_err!("array_length does not support type '{array_type:?}'"),
     }
+}
+
+/// array_resize SQL function
+pub fn array_resize(arg: &[ArrayRef]) -> Result<ArrayRef> {
+    if arg.len() < 2 || arg.len() > 3 {
+        return exec_err!("array_resize needs two or three arguments");
+    }
+
+    let new_len = as_int64_array(&arg[1])?;
+    let new_element = if arg.len() == 3 {
+        Some(arg[2].clone())
+    } else {
+        None
+    };
+
+    match &arg[0].data_type() {
+        DataType::List(field) => {
+            let array = as_list_array(&arg[0])?;
+            general_list_resize::<i32>(array, new_len, field, new_element)
+        }
+        DataType::LargeList(field) => {
+            let array = as_large_list_array(&arg[0])?;
+            general_list_resize::<i64>(array, new_len, field, new_element)
+        }
+        array_type => exec_err!("array_resize does not support type '{array_type:?}'."),
+    }
+}
+
+/// array_resize keep the original array and append the default element to the end
+fn general_list_resize<O: OffsetSizeTrait>(
+    array: &GenericListArray<O>,
+    count_array: &Int64Array,
+    field: &FieldRef,
+    default_element: Option<ArrayRef>,
+) -> Result<ArrayRef>
+where
+    O: TryInto<i64>,
+{
+    let data_type = array.value_type();
+
+    let values = array.values();
+    let original_data = values.to_data();
+
+    // create default element array
+    let default_element = if let Some(default_element) = default_element {
+        default_element
+    } else {
+        let null_scalar = ScalarValue::try_from(&data_type)?;
+        null_scalar.to_array_of_size(original_data.len())?
+    };
+    let default_value_data = default_element.to_data();
+
+    // create a mutable array to store the original data
+    let capacity = Capacities::Array(original_data.len() + default_value_data.len());
+    let mut offsets = vec![O::usize_as(0)];
+    let mut mutable = MutableArrayData::with_capacities(
+        vec![&original_data, &default_value_data],
+        false,
+        capacity,
+    );
+
+    for (row_index, offset_window) in array.offsets().windows(2).enumerate() {
+        let count = count_array.value(row_index).to_usize().ok_or_else(|| {
+            internal_datafusion_err!("array_resize: failed to convert size to usize")
+        })?;
+        let count = O::usize_as(count);
+        let start = offset_window[0];
+        if start + count > offset_window[1] {
+            let extra_count =
+                (start + count - offset_window[1]).try_into().map_err(|_| {
+                    internal_datafusion_err!(
+                        "array_resize: failed to convert size to i64"
+                    )
+                })?;
+            let end = offset_window[1];
+            mutable.extend(0, (start).to_usize().unwrap(), (end).to_usize().unwrap());
+            // append default element
+            for _ in 0..extra_count {
+                mutable.extend(1, row_index, row_index + 1);
+            }
+        } else {
+            let end = start + count;
+            mutable.extend(0, (start).to_usize().unwrap(), (end).to_usize().unwrap());
+        };
+        offsets.push(offsets[row_index] + count);
+    }
+
+    let data = mutable.freeze();
+    Ok(Arc::new(GenericListArray::<O>::try_new(
+        field.clone(),
+        OffsetBuffer::<O>::new(offsets.into()),
+        arrow_array::make_array(data),
+        None,
+    )?))
 }
 
 /// Array_sort SQL function
