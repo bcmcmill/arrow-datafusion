@@ -22962,15 +22962,12 @@ impl serde::Serialize for ScalarFunction {
             Self::ArrayReplaceAll => "ArrayReplaceAll",
             Self::Nanvl => "Nanvl",
             Self::Iszero => "Iszero",
-            Self::ArrayIntersect => "ArrayIntersect",
-            Self::ArrayUnion => "ArrayUnion",
             Self::OverLay => "OverLay",
             Self::ArrayExcept => "ArrayExcept",
             Self::Levenshtein => "Levenshtein",
             Self::SubstrIndex => "SubstrIndex",
             Self::FindInSet => "FindInSet",
             Self::EndsWith => "EndsWith",
-            Self::ArrayReverse => "ArrayReverse",
         };
         serializer.serialize_str(variant)
     }
@@ -23052,15 +23049,12 @@ impl<'de> serde::Deserialize<'de> for ScalarFunction {
             "ArrayReplaceAll",
             "Nanvl",
             "Iszero",
-            "ArrayIntersect",
-            "ArrayUnion",
             "OverLay",
             "ArrayExcept",
             "Levenshtein",
             "SubstrIndex",
             "FindInSet",
             "EndsWith",
-            "ArrayReverse",
         ];
 
         struct GeneratedVisitor;
@@ -23171,15 +23165,12 @@ impl<'de> serde::Deserialize<'de> for ScalarFunction {
                     "ArrayReplaceAll" => Ok(ScalarFunction::ArrayReplaceAll),
                     "Nanvl" => Ok(ScalarFunction::Nanvl),
                     "Iszero" => Ok(ScalarFunction::Iszero),
-                    "ArrayIntersect" => Ok(ScalarFunction::ArrayIntersect),
-                    "ArrayUnion" => Ok(ScalarFunction::ArrayUnion),
                     "OverLay" => Ok(ScalarFunction::OverLay),
                     "ArrayExcept" => Ok(ScalarFunction::ArrayExcept),
                     "Levenshtein" => Ok(ScalarFunction::Levenshtein),
                     "SubstrIndex" => Ok(ScalarFunction::SubstrIndex),
                     "FindInSet" => Ok(ScalarFunction::FindInSet),
                     "EndsWith" => Ok(ScalarFunction::EndsWith),
-                    "ArrayReverse" => Ok(ScalarFunction::ArrayReverse),
                     _ => Err(serde::de::Error::unknown_variant(value, FIELDS)),
                 }
             }
