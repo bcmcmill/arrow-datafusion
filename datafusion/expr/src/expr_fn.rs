@@ -585,42 +585,6 @@ scalar_expr!(Uuid, uuid, , "returns uuid v4 as a string value");
 scalar_expr!(Log, log, base x, "logarithm of a `x` for a particular `base`");
 
 scalar_expr!(
-    ArrayExcept,
-    array_except,
-    first_array second_array,
-    "Returns an array of the elements that appear in the first array but not in the second."
-);
-scalar_expr!(
-    ArrayPosition,
-    array_position,
-    array element index,
-    "searches for an element in the array, returns first occurrence."
-);
-scalar_expr!(
-    ArrayPositions,
-    array_positions,
-    array element,
-    "searches for an element in the array, returns all occurrences."
-);
-scalar_expr!(
-    ArrayRemove,
-    array_remove,
-    array element,
-    "removes the first element from the array equal to the given value."
-);
-scalar_expr!(
-    ArrayRemoveN,
-    array_remove_n,
-    array element max,
-    "removes the first `max` elements from the array equal to the given value."
-);
-scalar_expr!(
-    ArrayRemoveAll,
-    array_remove_all,
-    array element,
-    "removes all elements from the array equal to the given value."
-);
-scalar_expr!(
     ArrayReplace,
     array_replace,
     array from to,
@@ -1182,11 +1146,6 @@ mod test {
         test_scalar_expr!(Trim, trim, string);
         test_scalar_expr!(Upper, upper, string);
 
-        test_scalar_expr!(ArrayPosition, array_position, array, element, index);
-        test_scalar_expr!(ArrayPositions, array_positions, array, element);
-        test_scalar_expr!(ArrayRemove, array_remove, array, element);
-        test_scalar_expr!(ArrayRemoveN, array_remove_n, array, element, max);
-        test_scalar_expr!(ArrayRemoveAll, array_remove_all, array, element);
         test_scalar_expr!(ArrayReplace, array_replace, array, from, to);
         test_scalar_expr!(ArrayReplaceN, array_replace_n, array, from, to, max);
         test_scalar_expr!(ArrayReplaceAll, array_replace_all, array, from, to);

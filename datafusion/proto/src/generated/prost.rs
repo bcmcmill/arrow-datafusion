@@ -2906,10 +2906,10 @@ pub enum ScalarFunction {
     /// 89 was ArrayRepeat
     /// 90 was ArrayLength
     /// 91 was ArrayNdims
-    ArrayPosition = 92,
-    ArrayPositions = 93,
+    /// 92 was ArrayPosition
+    /// 93 was ArrayPositions
     /// 94 was ArrayPrepend
-    ArrayRemove = 95,
+    /// 95 was ArrayRemove
     ArrayReplace = 96,
     /// 97 was ArrayToString
     /// 98 was Cardinality
@@ -2919,9 +2919,9 @@ pub enum ScalarFunction {
     /// 104 was ArrayHas
     /// 105 was ArrayHasAny
     /// 106 was ArrayHasAll
-    ArrayRemoveN = 107,
+    /// 107 was ArrayRemoveN
     ArrayReplaceN = 108,
-    ArrayRemoveAll = 109,
+    /// 109 was ArrayRemoveAll
     ArrayReplaceAll = 110,
     Nanvl = 111,
     /// 112 was Flatten
@@ -2935,7 +2935,7 @@ pub enum ScalarFunction {
     /// 120 was ArrayUnion
     OverLay = 121,
     /// 122 is Range
-    ArrayExcept = 123,
+    /// 123 is ArrayExcept
     /// 124 was ArrayPopFront
     Levenshtein = 125,
     SubstrIndex = 126,
@@ -3019,19 +3019,13 @@ impl ScalarFunction {
             ScalarFunction::Factorial => "Factorial",
             ScalarFunction::Lcm => "Lcm",
             ScalarFunction::Gcd => "Gcd",
-            ScalarFunction::ArrayPosition => "ArrayPosition",
-            ScalarFunction::ArrayPositions => "ArrayPositions",
-            ScalarFunction::ArrayRemove => "ArrayRemove",
             ScalarFunction::ArrayReplace => "ArrayReplace",
             ScalarFunction::Cot => "Cot",
-            ScalarFunction::ArrayRemoveN => "ArrayRemoveN",
             ScalarFunction::ArrayReplaceN => "ArrayReplaceN",
-            ScalarFunction::ArrayRemoveAll => "ArrayRemoveAll",
             ScalarFunction::ArrayReplaceAll => "ArrayReplaceAll",
             ScalarFunction::Nanvl => "Nanvl",
             ScalarFunction::Iszero => "Iszero",
             ScalarFunction::OverLay => "OverLay",
-            ScalarFunction::ArrayExcept => "ArrayExcept",
             ScalarFunction::Levenshtein => "Levenshtein",
             ScalarFunction::SubstrIndex => "SubstrIndex",
             ScalarFunction::FindInSet => "FindInSet",
@@ -3100,19 +3094,13 @@ impl ScalarFunction {
             "Factorial" => Some(Self::Factorial),
             "Lcm" => Some(Self::Lcm),
             "Gcd" => Some(Self::Gcd),
-            "ArrayPosition" => Some(Self::ArrayPosition),
-            "ArrayPositions" => Some(Self::ArrayPositions),
-            "ArrayRemove" => Some(Self::ArrayRemove),
             "ArrayReplace" => Some(Self::ArrayReplace),
             "Cot" => Some(Self::Cot),
-            "ArrayRemoveN" => Some(Self::ArrayRemoveN),
             "ArrayReplaceN" => Some(Self::ArrayReplaceN),
-            "ArrayRemoveAll" => Some(Self::ArrayRemoveAll),
             "ArrayReplaceAll" => Some(Self::ArrayReplaceAll),
             "Nanvl" => Some(Self::Nanvl),
             "Iszero" => Some(Self::Iszero),
             "OverLay" => Some(Self::OverLay),
-            "ArrayExcept" => Some(Self::ArrayExcept),
             "Levenshtein" => Some(Self::Levenshtein),
             "SubstrIndex" => Some(Self::SubstrIndex),
             "FindInSet" => Some(Self::FindInSet),
